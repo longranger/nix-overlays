@@ -1,11 +1,13 @@
 { pkgs }:
 
-pkgs.stdenv.mkDerivation {
+pkgs.stdenv.mkDerivation rec {
   pname = "gemini-cli";
   version = "0.25.1";
+
   src = pkgs.fetchurl {
-    url = "https://github.com/google-gemini/gemini-cli/releases/download/v0.25.1/gemini.js";
-    # hash = "sha256-VqO03HAEVpPj241V1yL+P+eL9s8s5v4b6Y3o7y6w8zM=";
+    url = "https://github.com/google-gemini/gemini-cli/releases/download/v${version}/gemini.js";
+    # Found via:
+    # nix-hash --type sha256 --to-base64 $(nix-prefetch-url https://github.com/google-gemini/gemini-cli/releases/download/v${version}/gemini.js)
     hash = "sha256-LEIXrE0Jt8nIZ93KschEBu96HpRg3VXPNeeodwwVu6s=";
   };
   dontUnpack = true;
