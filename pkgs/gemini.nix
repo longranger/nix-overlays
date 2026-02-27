@@ -1,29 +1,34 @@
-{ pkgs }:
+{ stdenv, fetchurl, makeWrapper, nodejs, lib, ... }:
 
-pkgs.stdenv.mkDerivation rec {
+stdenv.mkDerivation rec {
   pname = "gemini-cli";
-  version = "0.25.2";
+  version = "0.30.0"; # GEMINI_VERSION_MARKER
 
-  src = pkgs.fetchurl {
+  src = fetchurl {
     url = "https://github.com/google-gemini/gemini-cli/releases/download/v${version}/gemini.js";
-    # Found via:
-    # nix-hash --type sha256 --to-base64 $(nix-prefetch-url https://github.com/google-gemini/gemini-cli/releases/download/v${version}/gemini.js)
-    hash = "sha256-k5zGtNlpW+T41DxrKexaqLinV5CzrQYepW+MKVYoS9o=";
+    hash = "sha256-N4pfjiaawx8kvaOFoQ53owJehD69fECJPpt5DxKVJ7k="; # GEMINI_HASH_MARKER
   };
+
   dontUnpack = true;
-  nativeBuildInputs = [ pkgs.makeWrapper ];
+
+  nativeBuildInputs = [ makeWrapper ];
+
   installPhase = ''
     runHook preInstall
+
     mkdir -p $out/libexec
     cp $src $out/libexec/gemini.js
+
     mkdir -p $out/bin
-    makeWrapper ${pkgs.nodejs}/bin/node $out/bin/gemini \
+    makeWrapper ${nodejs}/bin/node $out/bin/gemini \
       --add-flags "$out/libexec/gemini.js"
+
     runHook postInstall
   '';
+
   meta = {
     description = "A command-line interface for Google's Gemini models";
     homepage = "https://github.com/google-gemini/gemini-cli";
-    license = pkgs.lib.licenses.asl20;
+    license = lib.licenses.asl20;
   };
 }
