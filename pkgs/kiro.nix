@@ -1,4 +1,4 @@
-{ stdenv, fetchurl, unzip, makeWrapper, git, openssh, xdg-utils, coreutils, cacert, lib, ... }:
+{ stdenv, fetchurl, unzip, makeWrapper, git, openssh, xdg-utils, coreutils, cacert, lib, bun, ... }:
 
 let
   # Architecture mapping
@@ -33,7 +33,8 @@ stdenv.mkDerivation {
       if [ -x "$bin" ]; then
         wrapProgram "$bin" \
           --prefix PATH : ${lib.makeBinPath [ git openssh xdg-utils coreutils ]} \
-          --set SSL_CERT_FILE "${cacert}/etc/ssl/certs/ca-bundle.crt"
+          --set SSL_CERT_FILE "${cacert}/etc/ssl/certs/ca-bundle.crt" \
+          --run "mkdir -p ~/.local/share/kiro-cli && ln -sf ${bun}/bin/bun ~/.local/share/kiro-cli/bun"
       fi
     done
 

@@ -13,7 +13,7 @@ let
 
   fetchedDeps = buildNpmPackage {
     inherit pname version src;
-    npmDepsHash = "sha256-y0LafX1+ukW8HRYBqQ3QfZGHo1cVk00bNygdwsBR/7g="; # GEMINI_DEPS_MARKER
+    npmDepsHash = "sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="; # GEMINI_DEPS_MARKER
   };
 
 in

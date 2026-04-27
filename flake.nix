@@ -13,7 +13,7 @@
       perSystem = { pkgs, ... }: {
         packages = {
           kiro = pkgs.callPackage ./pkgs/kiro.nix { };
-          gemini = pkgs.callPackage ./pkgs/gemini.nix { };
+          # gemini = pkgs.callPackage ./pkgs/gemini.nix { };
         };
       };
     };
