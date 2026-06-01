@@ -12,7 +12,7 @@ stdenv.mkDerivation {
     url = "https://desktop-release.q.us-east-1.amazonaws.com/latest/kirocli-${arch}-linux-musl.zip";
     # -------------------------------------------------------------
     # The update script will grep for this specific comment line:
-    hash = "sha256-EzR5G6t/VHcnJzcowVaqrqTzH+ptrxdzQB6UfPGkzqM="; # KIRO_HASH_MARKER
+    hash = "sha256-GarkPxXZ/jrvP6d94TcuJnn7F+CzZnux+9qwFamBBM0="; # KIRO_HASH_MARKER
     # -------------------------------------------------------------
   };
 

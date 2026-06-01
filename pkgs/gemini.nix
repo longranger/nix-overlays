@@ -2,13 +2,13 @@
 
 let
   pname = "gemini-cli";
-  version = "0.39.1"; # GEMINI_VERSION_MARKER
+  version = "0.44.1"; # GEMINI_VERSION_MARKER
 
   src = fetchFromGitHub {
     owner = "google-gemini";
     repo = "gemini-cli";
     rev = "v${version}";
-    hash = "sha256-O0TBrT3WDCBZ3ZyFyJPBBtPfnDzdFQ7b8pOJOD7bj2g="; # GEMINI_HASH_MARKER
+    hash = "sha256-FizxmHWOomlnWZoCK2lOLc94RjNTQM33vN16nLXsJI0="; # GEMINI_HASH_MARKER
   };
 
   fetchedDeps = buildNpmPackage {
