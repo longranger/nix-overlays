@@ -67,39 +67,46 @@ update_github_version() {
 }
 
 # ---
-update_gemini_npm() {
-    FILE="./pkgs/gemini.nix"
-    V_MARKER="GEMINI_VERSION_MARKER"
-    H_MARKER="GEMINI_HASH_MARKER"
-    D_MARKER="GEMINI_DEPS_MARKER"
+update_goose_cargo() {
+    FILE="./pkgs/goose.nix"
+    V_MARKER="GOOSE_VERSION_MARKER"
+    H_MARKER="GOOSE_HASH_MARKER"
+    C_MARKER="GOOSE_CARGO_HASH_MARKER"
 
-    # 1. Get Latest Version
-    LATEST_TAG=$(curl -s "https://api.github.com/repos/google-gemini/gemini-cli/releases/latest" | jq -r .tag_name)
+    # 1. Fetch Latest Tag from GitHub API
+    LATEST_TAG=$(curl -s "https://api.github.com/repos/aaif-goose/goose/releases/latest" | jq -r .tag_name)
     VERSION=${LATEST_TAG#v}
 
-    # 2. Update Version and Source Hash (using nix-prefetch-github)
-    echo "Fetching new source hash for v$VERSION..."
-    TARGET_URL="https://github.com/google-gemini/gemini-cli/archive/refs/tags/v$VERSION.tar.gz"
+    OLD_VERSION=$(grep "# $V_MARKER" "$FILE" | sed -E 's/.*version = "([^"]*)";.*/\1/')
+    if [ "$OLD_VERSION" == "$VERSION" ]; then
+        echo "✅ Goose is already up to date ($VERSION)."
+        return
+    fi
+
+    echo "📦 Updating Goose: $OLD_VERSION -> $VERSION"
+
+    # 2. Get the Source Hash using nix-prefetch-url
+    TARGET_URL="https://github.com/aaif-goose/goose/archive/refs/tags/v$VERSION.tar.gz"
     RAW_HASH=$(nix-prefetch-url --unpack "$TARGET_URL")
     NEW_SOURCE_HASH=$(nix hash convert --to sri --hash-algo sha256 "$RAW_HASH")
 
     sed -i "s|version = \".*\"; # $V_MARKER|version = \"$VERSION\"; # $V_MARKER|" "$FILE"
     sed -i "s|hash = \".*\"; # $H_MARKER|hash = \"$NEW_SOURCE_HASH\"; # $H_MARKER|" "$FILE"
 
-    # 3. Handle the npmDepsHash (The "Nix Hash Dance")
-    echo "Calculating npmDepsHash (this takes a moment)..."
+    # 3. Calculate cargoHash via the Hash Dance
+    echo "Calculating cargoHash (this will take a moment)..."
     FAKE_SRI="sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="
-    sed -i "s|npmDepsHash = \".*\"; # $D_MARKER|npmDepsHash = \"$FAKE_SRI\"; # $D_MARKER|" "$FILE"
+    sed -i "s|cargoHash = \".*\"; # $C_MARKER|cargoHash = \"$FAKE_SRI\"; # $C_MARKER|" "$FILE"
 
-    # Force the build and extract the 'got' hash
-    # Note: Using .#gemini to match your flake-parts attribute
-    GOT_HASH=$(nix build .#gemini 2>&1 | grep "got:" | cut -d: -f2- | xargs || true)
+    # Force build to get real SRI hash from compiler stderr
+    GOT_HASH=$(nix build .#goose 2>&1 | grep "got:" | cut -d: -f2- | xargs || true)
 
     if [ -n "$GOT_HASH" ]; then
-        echo "✅ Updating deps hash to: $GOT_HASH"
-        sed -i "s|npmDepsHash = \".*\"; # $D_MARKER|npmDepsHash = \"$GOT_HASH\"; # $D_MARKER|" "$FILE"
+        echo "✅ Updating cargoHash to: $GOT_HASH"
+        sed -i "s|cargoHash = \".*\"; # $C_MARKER|cargoHash = \"$GOT_HASH\"; # $C_MARKER|" "$FILE"
     else
-        echo "❌ Failed to calculate deps hash. Check if 'nix build .#gemini' works manually."
+        echo "❌ Failed to calculate cargoHash. Run 'nix build .#goose' manually to debug."
+        exit 1
     fi
 }
 
@@ -111,17 +118,7 @@ update_static "Kiro" \
     "https://desktop-release.q.us-east-1.amazonaws.com/latest/kirocli-\${arch}-linux-musl.zip" \
     "KIRO_HASH_MARKER"
 
-#NOTE: Gemini is no longer a static file so has been moved to its own function
-# # Update Gemini (Versioned URL)
-# # Note: We pass a template where V_TAG will be replaced by "v0.25.2"
-# # Update Gemini (Point to the Source Tarball instead of just gemini.js)
-# update_github_version "Gemini" \
-#     "./pkgs/gemini.nix" \
-#     "google-gemini/gemini-cli" \
-#     "https://github.com/google-gemini/gemini-cli/archive/refs/tags/V_TAG.tar.gz" \
-#     "GEMINI_VERSION_MARKER" \
-#     "GEMINI_HASH_MARKER"
-update_gemini_npm
+update_goose_cargo
 
 echo "🎉 All tools updated."
 echo ""
