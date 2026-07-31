@@ -1,0 +1,22 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": [
+    "config:recommended"
+  ],
+  "packageRules": [
+    {
+      "matchPackagePrefixes": ["aaif-goose/goose"],
+      "automerge": true,
+      "automergeType": "branch"
+    }
+  ],
+  "customManagers": [
+    {
+      "customType": "regex",
+      "fileMatch": ["^pkgs/.*\\.nix$"],
+      "matchStrings": [
+        "version = \"(?<currentValue>.*?)\";\\s*#\\s*renovate:\\s*datasource=(?<datasource>.*?)\\s+depName=(?<depName>.*?)\\n"
+      ]
+    }
+  ]
+}

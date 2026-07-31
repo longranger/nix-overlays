@@ -1,7 +1,19 @@
-{ stdenv, fetchurl, unzip, makeWrapper, git, openssh, xdg-utils, coreutils, cacert, lib, bun, ... }:
+{
+  stdenv,
+  fetchurl,
+  unzip,
+  makeWrapper,
+  git,
+  openssh,
+  xdg-utils,
+  coreutils,
+  cacert,
+  lib,
+  bun,
+  ...
+}:
 
 let
-  # Architecture mapping
   arch = if stdenv.hostPlatform.system == "x86_64-linux" then "x86_64" else "aarch64";
 in
 stdenv.mkDerivation {
@@ -10,10 +22,7 @@ stdenv.mkDerivation {
 
   src = fetchurl {
     url = "https://desktop-release.q.us-east-1.amazonaws.com/latest/kirocli-${arch}-linux-musl.zip";
-    # -------------------------------------------------------------
-    # The update script will grep for this specific comment line:
-    hash = "sha256-Z8uZRvANykXDE4geQxzZYs7BewO0wJTPHBzw4jEVpyY="; # KIRO_HASH_MARKER
-    # -------------------------------------------------------------
+    hash = "sha256-Z8uZRvANykXDE4geQxzZYs7BewO0wJTPHBzw4jEVpyY=";
   };
 
   nativeBuildInputs = [ unzip makeWrapper ];
@@ -23,12 +32,10 @@ stdenv.mkDerivation {
     mkdir -p $out/bin
     unzip $src -d temp
 
-    # Find the folder containing the binaries
     BIN_DIR=$(find temp -type f -name "kiro-cli" -exec dirname {} \; | head -n 1)
     cp -r "$BIN_DIR"/* $out/bin/
     chmod +x $out/bin/*
 
-    # Wrap all executables
     for bin in $out/bin/*; do
       if [ -x "$bin" ]; then
         wrapProgram "$bin" \
@@ -38,7 +45,6 @@ stdenv.mkDerivation {
       fi
     done
 
-    # Alias
     if [ ! -f "$out/bin/kiro" ]; then ln -s $out/bin/kiro-cli $out/bin/kiro; fi
     rm -rf temp
   '';

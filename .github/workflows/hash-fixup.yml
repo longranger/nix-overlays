@@ -1,0 +1,76 @@
+name: "Nix Hash Fixup & Build Check"
+
+on:
+  push:
+    branches:
+      - "renovate/**"
+  schedule:
+    # Run nightly at 02:00 UTC to check if Kiro's /latest/ zip updated
+    - cron: "0 2 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  fix-hashes:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.ref }}
+
+      - name: Install Nix
+        uses: cachix/install-nix-action@v27
+        with:
+          extra_nix_config: |
+            experimental-features = nix-command flakes
+
+      - name: Test Build & Update Hashes
+        run: |
+          set -euo pipefail
+
+          update_pkg_hash() {
+            local pkg=$1
+            local target_attr=$2
+            local file="pkgs/${pkg}.nix"
+
+            echo "==> Testing ${pkg} (${target_attr})..."
+
+            # Force a hash mismatch to harvest the actual hash from Nix output
+            sed -i -E "s|(${target_attr}\s*=\s*\")sha256-[^\"]*(\";)|\1sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=\2|" "$file"
+
+            BUILD_ERR=$(nix build ".#${pkg}" 2>&1 || true)
+            NEW_HASH=$(echo "$BUILD_ERR" | grep -oP "got:\s+\Ksha256-[A-Za-z0-9+/=]+" | head -n 1)
+
+            if [ -n "$NEW_HASH" ]; then
+              echo "✅ Found updated ${target_attr} for ${pkg}: ${NEW_HASH}"
+              sed -i -E "s|(${target_attr}\s*=\s*\")sha256-[^\"]*(\";)|\1${NEW_HASH}\2|" "$file"
+            else
+              echo "⚠️ Could not extract hash mismatch for ${pkg} (${target_attr}). Restoring original file state."
+              git checkout -- "$file"
+            fi
+          }
+
+          # Process Goose
+          if git diff --name-only HEAD~1 | grep -q "pkgs/goose.nix" || [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            update_pkg_hash "goose-cli" "hash"
+            update_pkg_hash "goose-cli" "cargoHash"
+          fi
+
+          # Process Kiro
+          update_pkg_hash "kiro-cli" "hash"
+
+      - name: Commit and Push Updated Hashes
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+
+          if [[ -n $(git status --porcelain pkgs/) ]]; then
+            git add pkgs/
+            git commit -m "chore(auto-update): update SRI and cargo hashes"
+            git push
+          else
+            echo "No hash changes detected."
+          fi
