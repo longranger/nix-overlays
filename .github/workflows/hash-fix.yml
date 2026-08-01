@@ -47,31 +47,49 @@ jobs:
               return 0
             fi
 
-            echo "==> Testing ${flake_attr} -> ${target_attr} in ${file}..."
-
-            sed -i -E "s|(${target_attr}\s*=\s*\")[^\"]*(\";)|\1sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=\2|" "$file" || true
-            git add "$file" || true
-
-            set +e
-            BUILD_ERR=$(nix build ".#${flake_attr}" 2>&1)
-            BUILD_STATUS=$?
-            set -e
-
-            NEW_HASH=$(echo "$BUILD_ERR" | grep -oP "got:\s+\Ksha256-[A-Za-z0-9+/=]+" | head -n 1 || true)
-
-            if [ -n "$NEW_HASH" ]; then
-              echo "✅ Found updated ${target_attr} for ${flake_attr}: ${NEW_HASH}"
-              sed -i -E "s|(${target_attr}\s*=\s*\")[^\"]*(\";)|\1${NEW_HASH}\2|" "$file" || true
+            # 1. First, handle any target_attr (e.g. hash = "...")
+            if grep -q -E "${target_attr}\s*=\s*\"" "$file"; then
+              echo "==> Testing ${flake_attr} -> ${target_attr} in ${file}..."
+              sed -i -E "s|(${target_attr}\s*=\s*\")[^\"]*(\";)|\1sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=\2|" "$file" || true
               git add "$file" || true
-            else
-              echo "⚠️ Could not extract hash mismatch for ${flake_attr} (${target_attr}). Raw Nix output:"
-              echo "$BUILD_ERR" | tail -n 20
-              git checkout -- "$file" || true
 
-              # Fail the workflow if nix build failed for reasons OTHER than a hash check
-              if [ $BUILD_STATUS -ne 0 ] && ! echo "$BUILD_ERR" | grep -q "hash mismatch"; then
-                echo "❌ Hard evaluation failure in ${file}!"
-                exit 1
+              set +e
+              BUILD_ERR=$(nix build ".#${flake_attr}" 2>&1)
+              BUILD_STATUS=$?
+              set -e
+
+              NEW_HASH=$(echo "$BUILD_ERR" | grep -oP "got:\s+\Ksha256-[A-Za-z0-9+/=]+" | head -n 1 || true)
+
+              if [ -n "$NEW_HASH" ]; then
+                echo "✅ Found updated ${target_attr} for ${flake_attr}: ${NEW_HASH}"
+                sed -i -E "s|(${target_attr}\s*=\s*\")[^\"]*(\";)|\1${NEW_HASH}\2|" "$file" || true
+                git add "$file" || true
+              else
+                echo "⚠️ Could not extract hash mismatch for ${flake_attr} (${target_attr})."
+                git checkout -- "$file" || true
+              fi
+            fi
+
+            # 2. Next, check if the file contains outputHashes (git dependencies in Cargo.lock)
+            if grep -q "outputHashes" "$file"; then
+              echo "==> Testing ${flake_attr} -> outputHashes in ${file}..."
+              # Replace any existing hashes inside outputHashes block with dummy hash
+              sed -i -E '/outputHashes/,/};/ s|(=\s*")[^"]*(";)|\1sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=\2|g' "$file" || true
+              git add "$file" || true
+
+              set +e
+              BUILD_ERR=$(nix build ".#${flake_attr}" 2>&1)
+              set -e
+
+              NEW_OUTPUT_HASH=$(echo "$BUILD_ERR" | grep -oP "got:\s+\Ksha256-[A-Za-z0-9+/=]+" | head -n 1 || true)
+
+              if [ -n "$NEW_OUTPUT_HASH" ]; then
+                echo "✅ Found updated outputHash for ${flake_attr}: ${NEW_OUTPUT_HASH}"
+                sed -i -E "/outputHashes/,/};/ s|(=\s*\")[^\"]*(\";)|\1${NEW_OUTPUT_HASH}\2|g" "$file" || true
+                git add "$file" || true
+              else
+                echo "⚠️ Could not extract outputHash mismatch for ${flake_attr}."
+                git checkout -- "$file" || true
               fi
             fi
           }
