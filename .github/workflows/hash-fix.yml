@@ -32,9 +32,9 @@ jobs:
           set -euo pipefail
 
           update_pkg_hash() {
-            local file_name=$1    # e.g., "goose" (for pkgs/goose.nix)
-            local flake_attr=$2   # e.g., "goose-cli" (for .#goose-cli)
-            local target_attr=$3  # e.g., "hash" or "cargoHash"
+            local file_name=$1
+            local flake_attr=$2
+            local target_attr=$3
             local file="pkgs/${file_name}.nix"
 
             if [ ! -f "$file" ]; then
@@ -44,19 +44,14 @@ jobs:
 
             echo "==> Testing ${flake_attr} -> ${target_attr} in ${file}..."
 
-            # 1. Substitute fake hash safely (ignore sed return code)
             sed -i -E "s|(${target_attr}\s*=\s*\")[^\"]*(\";)|\1sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=\2|" "$file" || true
-
-            # 2. Stage the file so Nix Flakes sees the updated working tree!
             git add "$file" || true
 
-            # 3. Run nix build and capture stderr/stdout
             set +e
             BUILD_ERR=$(nix build ".#${flake_attr}" 2>&1)
             BUILD_STATUS=$?
             set -e
 
-            # 4. Extract new hash from error output
             NEW_HASH=$(echo "$BUILD_ERR" | grep -oP "got:\s+\Ksha256-[A-Za-z0-9+/=]+" | head -n 1 || true)
 
             if [ -n "$NEW_HASH" ]; then
@@ -66,8 +61,13 @@ jobs:
             else
               echo "⚠️ Could not extract hash mismatch for ${flake_attr} (${target_attr}). Raw Nix output:"
               echo "$BUILD_ERR" | tail -n 20
-              echo "Restoring original file state."
               git checkout -- "$file" || true
+
+              # Fail the workflow if nix build failed for reasons OTHER than a hash check
+              if [ $BUILD_STATUS -ne 0 ] && ! echo "$BUILD_ERR" | grep -q "hash mismatch"; then
+                echo "❌ Hard evaluation failure in ${file}!"
+                exit 1
+              fi
             fi
           }
 
