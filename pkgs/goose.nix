@@ -21,8 +21,9 @@ rustPlatform.buildRustPackage {
     hash = "sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=";
   };
 
-  cargoHash = "sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=";
-  useFetchCargoVendor = true;
+  cargoLock = {
+    lockFile = ./Cargo.lock; # Or outputHashes if workspace dependencies have unpinned git sources
+  };
 
   nativeBuildInputs = [ pkg-config ];
   buildInputs = [

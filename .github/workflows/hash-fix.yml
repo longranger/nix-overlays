@@ -91,7 +91,6 @@ jobs:
           if [ "$SHOULD_CHECK_GOOSE" = true ]; then
             # File name: goose, Flake attr: goose
             update_pkg_hash "goose" "goose" "hash"
-            update_pkg_hash "goose" "goose" "cargoHash"
           fi
 
           # File name: kiro, Flake attr: kiro
