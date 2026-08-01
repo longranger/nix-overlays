@@ -4,6 +4,7 @@
   fetchFromGitHub,
   fetchurl,
   pkg-config,
+  cmake,
   openssl,
   dbus,
   stdenv,
@@ -39,6 +40,7 @@ rustPlatform.buildRustPackage rec {
 
   nativeBuildInputs = [
     pkg-config
+    cmake
     llvmPackages.clang
   ];
 
