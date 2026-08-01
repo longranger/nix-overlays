@@ -32,7 +32,7 @@ rustPlatform.buildRustPackage {
   meta = with lib; {
     description = "Block Goose AI developer agent CLI";
     homepage = "https://github.com/aaif-goose/goose";
-    license = licenses.apache20;
+    license = licenses.asl20;
     mainProgram = "goose";
   };
 }
