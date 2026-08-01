@@ -59,6 +59,8 @@ jobs:
             local SUCCESS=false
 
             for i in {1..3}; do
+              LOG_FILE=$(mktemp)
+
               echo "  [Pass $i] Building .#${flake_attr}..."
 
               set +e
