@@ -5,18 +5,12 @@
   ],
   "packageRules": [
     {
-      "matchPackagePrefixes": ["aaif-goose/goose"],
+      "description": "Auto-merge custom Nix package version updates after CI passes",
+      "matchPackageNames": ["aaif-goose/goose", "kiro"],
       "automerge": true,
-      "automergeType": "branch"
-    }
-  ],
-  "customManagers": [
-    {
-      "customType": "regex",
-      "fileMatch": ["^pkgs/.*\\.nix$"],
-      "matchStrings": [
-        "version = \"(?<currentValue>.*?)\";\\s*#\\s*renovate:\\s*datasource=(?<datasource>.*?)\\s+depName=(?<depName>.*?)\\n"
-      ]
+      "automergeType": "pr",
+      "platformAutomerge": true,
+      "ignoreTests": false
     }
   ]
 }
