@@ -52,11 +52,11 @@ jobs:
             fi
 
             # -------------------------------------------------------------------
-            # STEP 1: Primary Source Hash (src.hash or hash)
+            # STEP 1: Primary Source Hash (scoped specifically to `src = ...`)
             # -------------------------------------------------------------------
-            if grep -q -E "${target_attr}\s*=\s*\"" "$file"; then
-              echo "==> [1/3] Testing ${flake_attr} -> ${target_attr} in ${file}..."
-              sed -i -E "s|(${target_attr}\s*=\s*\")[^\"]*(\";)|\1sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=\2|" "$file" || true
+            if grep -q "src = " "$file"; then
+              echo "==> [1/3] Testing ${flake_attr} -> src.hash in ${file}..."
+              sed -i -E '/src = /,/};/ s|(hash\s*=\s*")[^"]*(";)|\1sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=\2|g' "$file" || true
               git add "$file" || true
 
               set +e
@@ -66,12 +66,9 @@ jobs:
               NEW_HASH=$(echo "$BUILD_ERR" | grep -oP "got:\s+\Ksha256-[A-Za-z0-9+/=]+" | head -n 1 || true)
 
               if [ -n "$NEW_HASH" ]; then
-                echo "✅ Found updated ${target_attr} for ${flake_attr}: ${NEW_HASH}"
-                sed -i -E "s|(${target_attr}\s*=\s*\")[^\"]*(\";)|\1${NEW_HASH}\2|" "$file" || true
+                echo "✅ Found updated src.hash for ${flake_attr}: ${NEW_HASH}"
+                sed -i -E "/src = /,/};/ s|(hash\s*=\s*\")[^\"]*(\";)|\1${NEW_HASH}\2|g" "$file" || true
                 git add "$file" || true
-              else
-                echo "⚠️ Could not extract primary hash mismatch for ${flake_attr}."
-                git checkout -- "$file" || true
               fi
             fi
 
