@@ -11,7 +11,8 @@
 }:
 
 let
-  version = "1.45.0"; # renovate: datasource=github-releases depName=aaif-goose/goose
+  # renovate: datasource=github-releases depName=aaif-goose/goose
+  version = "1.45.0";
 
   rusty_v8_lib = fetchurl {
     url = "https://github.com/denoland/rusty_v8/releases/download/v145.0.0/librusty_v8_release_${stdenv.hostPlatform.config}.a.gz";
