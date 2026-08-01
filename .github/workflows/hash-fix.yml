@@ -3,7 +3,11 @@ name: "Nix Hash Fixup & Build Check"
 on:
   push:
     branches:
+      - main
       - "renovate/**"
+  pull_request:
+    branches:
+      - main
   schedule:
     - cron: "0 2 * * *"
   workflow_dispatch:
@@ -47,7 +51,7 @@ jobs:
               return 0
             fi
 
-            # 1. First, handle any target_attr (e.g. hash = "...")
+            # 1. Primary source hash (src.hash or hash)
             if grep -q -E "${target_attr}\s*=\s*\"" "$file"; then
               echo "==> Testing ${flake_attr} -> ${target_attr} in ${file}..."
               sed -i -E "s|(${target_attr}\s*=\s*\")[^\"]*(\";)|\1sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=\2|" "$file" || true
@@ -55,7 +59,6 @@ jobs:
 
               set +e
               BUILD_ERR=$(nix build ".#${flake_attr}" 2>&1)
-              BUILD_STATUS=$?
               set -e
 
               NEW_HASH=$(echo "$BUILD_ERR" | grep -oP "got:\s+\Ksha256-[A-Za-z0-9+/=]+" | head -n 1 || true)
@@ -70,10 +73,9 @@ jobs:
               fi
             fi
 
-            # 2. Next, check if the file contains outputHashes (git dependencies in Cargo.lock)
+            # 2. Cargo outputHashes (git dependencies in Cargo.lock)
             if grep -q "outputHashes" "$file"; then
               echo "==> Testing ${flake_attr} -> outputHashes in ${file}..."
-              # Replace any existing hashes inside outputHashes block with dummy hash
               sed -i -E '/outputHashes/,/};/ s|(=\s*")[^"]*(";)|\1sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=\2|g' "$file" || true
               git add "$file" || true
 
@@ -94,25 +96,19 @@ jobs:
             fi
           }
 
-          # Check if goose.nix changed in the branch/commit or if triggered manually/via cron
-          SHOULD_CHECK_GOOSE=false
+          # Determine scope based on event type
+          SHOULD_CHECK_ALL=false
           if [[ "${{ github.event_name }}" == "workflow_dispatch" ]] || [[ "${{ github.event_name }}" == "schedule" ]]; then
-            SHOULD_CHECK_GOOSE=true
-          elif git rev-parse --verify HEAD~1 >/dev/null 2>&1; then
-            if git diff --name-only HEAD~1 HEAD | grep -q "pkgs/goose.nix"; then
-              SHOULD_CHECK_GOOSE=true
-            fi
-          else
-            SHOULD_CHECK_GOOSE=true
+            SHOULD_CHECK_ALL=true
           fi
 
-          if [ "$SHOULD_CHECK_GOOSE" = true ]; then
-            # File name: goose, Flake attr: goose
+          if [ "$SHOULD_CHECK_ALL" = true ] || git diff --name-only HEAD~1 HEAD 2>/dev/null | grep -q "pkgs/goose.nix"; then
             update_pkg_hash "goose" "goose" "hash"
           fi
 
-          # File name: kiro, Flake attr: kiro
-          update_pkg_hash "kiro" "kiro" "hash"
+          if [ "$SHOULD_CHECK_ALL" = true ] || git diff --name-only HEAD~1 HEAD 2>/dev/null | grep -q "pkgs/kiro.nix"; then
+            update_pkg_hash "kiro" "kiro" "hash"
+          fi
 
       - name: Commit and Push Updated Hashes
         run: |
