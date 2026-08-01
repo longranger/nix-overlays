@@ -7,9 +7,12 @@
   dbus,
 }:
 
-rustPlatform.buildRustPackage rec {
-  pname = "goose-cli";
+let
   version = "1.45.0"; # renovate: datasource=github-releases depName=aaif-goose/goose
+in
+rustPlatform.buildRustPackage {
+  pname = "goose-cli";
+  inherit version;
 
   src = fetchFromGitHub {
     owner = "aaif-goose";
@@ -29,7 +32,7 @@ rustPlatform.buildRustPackage rec {
   meta = with lib; {
     description = "Block Goose AI developer agent CLI";
     homepage = "https://github.com/aaif-goose/goose";
-    license = licenses.apache2;
+    license = licenses.apache20;
     mainProgram = "goose";
   };
 }
