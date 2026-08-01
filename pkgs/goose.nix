@@ -23,6 +23,9 @@ rustPlatform.buildRustPackage rec {
 
   cargoLock = {
     lockFile = "${src}/Cargo.lock";
+    outputHashes = {
+      "cudaforge-0.1.6" = "sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=";
+    };
   };
 
   nativeBuildInputs = [ pkg-config ];
