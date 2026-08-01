@@ -51,9 +51,11 @@ jobs:
               return 0
             fi
 
-            # 1. Primary source hash (src.hash or hash)
+            # -------------------------------------------------------------------
+            # STEP 1: Primary Source Hash (src.hash or hash)
+            # -------------------------------------------------------------------
             if grep -q -E "${target_attr}\s*=\s*\"" "$file"; then
-              echo "==> Testing ${flake_attr} -> ${target_attr} in ${file}..."
+              echo "==> [1/3] Testing ${flake_attr} -> ${target_attr} in ${file}..."
               sed -i -E "s|(${target_attr}\s*=\s*\")[^\"]*(\";)|\1sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=\2|" "$file" || true
               git add "$file" || true
 
@@ -68,14 +70,16 @@ jobs:
                 sed -i -E "s|(${target_attr}\s*=\s*\")[^\"]*(\";)|\1${NEW_HASH}\2|" "$file" || true
                 git add "$file" || true
               else
-                echo "⚠️ Could not extract hash mismatch for ${flake_attr} (${target_attr})."
+                echo "⚠️ Could not extract primary hash mismatch for ${flake_attr}."
                 git checkout -- "$file" || true
               fi
             fi
 
-            # 2. Cargo outputHashes (git dependencies in Cargo.lock)
+            # -------------------------------------------------------------------
+            # STEP 2: Cargo outputHashes (git dependencies in Cargo.lock)
+            # -------------------------------------------------------------------
             if grep -q "outputHashes" "$file"; then
-              echo "==> Testing ${flake_attr} -> outputHashes in ${file}..."
+              echo "==> [2/3] Testing ${flake_attr} -> outputHashes in ${file}..."
               sed -i -E '/outputHashes/,/};/ s|(=\s*")[^"]*(";)|\1sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=\2|g' "$file" || true
               git add "$file" || true
 
@@ -91,6 +95,30 @@ jobs:
                 git add "$file" || true
               else
                 echo "⚠️ Could not extract outputHash mismatch for ${flake_attr}."
+                git checkout -- "$file" || true
+              fi
+            fi
+
+            # -------------------------------------------------------------------
+            # STEP 3: V8 Static Archive Hash (rusty_v8_lib)
+            # -------------------------------------------------------------------
+            if grep -q "rusty_v8_lib" "$file"; then
+              echo "==> [3/3] Testing ${flake_attr} -> rusty_v8_lib hash in ${file}..."
+              sed -i -E '/rusty_v8_lib/,/};/ s|(hash\s*=\s*")[^"]*(";)|\1sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=\2|g' "$file" || true
+              git add "$file" || true
+
+              set +e
+              BUILD_ERR=$(nix build ".#${flake_attr}" 2>&1)
+              set -e
+
+              NEW_V8_HASH=$(echo "$BUILD_ERR" | grep -oP "got:\s+\Ksha256-[A-Za-z0-9+/=]+" | head -n 1 || true)
+
+              if [ -n "$NEW_V8_HASH" ]; then
+                echo "✅ Found updated rusty_v8_lib hash for ${flake_attr}: ${NEW_V8_HASH}"
+                sed -i -E "/rusty_v8_lib/,/};/ s|(hash\s*=\s*\")[^\"]*(\";)|\1${NEW_V8_HASH}\2|g" "$file" || true
+                git add "$file" || true
+              else
+                echo "⚠️ Could not extract rusty_v8_lib hash mismatch for ${flake_attr}."
                 git checkout -- "$file" || true
               fi
             fi
