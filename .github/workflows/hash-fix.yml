@@ -29,6 +29,9 @@ jobs:
 
       - name: Test Build & Update Hashes
         env:
+          NIX_CONFIG: |
+            http2 = true
+            user-agent = nix-overlays-ci (github.com/${{ github.repository }})
           CARGO_HTTP_USER_AGENT: "nix-overlays-ci (github.com/${{ github.repository }})"
         run: |
           set -euo pipefail
