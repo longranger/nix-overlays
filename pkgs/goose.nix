@@ -36,9 +36,6 @@ rustPlatform.buildRustPackage rec {
     };
   };
 
-  # Pass the fetched static lib to rusty_v8's build script
-  RUSTY_V8_ARCHIVE = rusty_v8_lib;
-
   nativeBuildInputs = [
     pkg-config
     llvmPackages.clang
@@ -53,9 +50,8 @@ rustPlatform.buildRustPackage rec {
   env = {
     RUSTY_V8_ARCHIVE = rusty_v8_lib;
     LIBCLANG_PATH = "${llvmPackages.libclang.lib}/lib";
+    BINDGEN_EXTRA_CLANG_ARGS = "-isystem ${llvmPackages.libclang.lib}/lib/clang/${llvmPackages.libclang.version}/include";
   };
-
-  BINDGEN_EXTRA_CLANG_ARGS = "-isystem ${llvmPackages.libclang.lib}/lib/clang/${llvmPackages.libclang.version}/include";
 
   meta = with lib; {
     description = "Block Goose AI developer agent CLI";
