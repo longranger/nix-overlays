@@ -1,11 +1,10 @@
-name: "Nix Hash Fix & Build Check"
+name: "Nix Hash Fixup & Build Check"
 
 on:
   push:
     branches:
       - "renovate/**"
   schedule:
-    # Run nightly at 02:00 UTC to check if Kiro's /latest/ zip updated
     - cron: "0 2 * * *"
   workflow_dispatch:
 
@@ -20,18 +19,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           ref: ${{ github.ref }}
-
-      - name: Install Nix
-        uses: cachix/install-nix-action@v27
-        with:
-          extra_nix_config: |
-            experimental-features = nix-command flakes
-
-      - name: Checkout Repository
-        uses: actions/checkout@v4
-        with:
-          ref: ${{ github.ref }}
-          fetch-depth: 0 # Fetch all history so git diff and HEAD~1 work properly
+          fetch-depth: 0
 
       - name: Install Nix
         uses: cachix/install-nix-action@v27
@@ -44,23 +32,30 @@ jobs:
           set -euo pipefail
 
           update_pkg_hash() {
-            local pkg=$1
-            local target_attr=$2
-            local file="pkgs/${pkg}.nix"
+            local file_name=$1    # e.g., "goose" (for pkgs/goose.nix)
+            local flake_attr=$2   # e.g., "goose-cli" (for .#goose-cli)
+            local target_attr=$3  # e.g., "hash" or "cargoHash"
+            local file="pkgs/${file_name}.nix"
 
-            echo "==> Testing ${pkg} (${target_attr})..."
+            if [ ! -f "$file" ]; then
+              echo "❌ File $file does not exist. Skipping."
+              return 1
+            fi
+
+            echo "==> Testing ${flake_attr} -> ${target_attr} in ${file}..."
 
             # Force a hash mismatch to harvest the actual hash from Nix output
             sed -i -E "s|(${target_attr}\s*=\s*\")sha256-[^\"]*(\";)|\1sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=\2|" "$file"
 
-            BUILD_ERR=$(nix build ".#${pkg}" 2>&1 || true)
+            # Capture nix build output; allow error so set -e doesn't break the script
+            BUILD_ERR=$(nix build ".#${flake_attr}" 2>&1 || true)
             NEW_HASH=$(echo "$BUILD_ERR" | grep -oP "got:\s+\Ksha256-[A-Za-z0-9+/=]+" | head -n 1)
 
             if [ -n "$NEW_HASH" ]; then
-              echo "✅ Found updated ${target_attr} for ${pkg}: ${NEW_HASH}"
+              echo "✅ Found updated ${target_attr} for ${flake_attr}: ${NEW_HASH}"
               sed -i -E "s|(${target_attr}\s*=\s*\")sha256-[^\"]*(\";)|\1${NEW_HASH}\2|" "$file"
             else
-              echo "⚠️ Could not extract hash mismatch for ${pkg} (${target_attr}). Restoring original file state."
+              echo "⚠️ Could not extract hash mismatch for ${flake_attr} (${target_attr}). Restoring original file state."
               git checkout -- "$file"
             fi
           }
@@ -74,17 +69,17 @@ jobs:
               SHOULD_CHECK_GOOSE=true
             fi
           else
-            # Single-commit branch fallback
             SHOULD_CHECK_GOOSE=true
           fi
 
           if [ "$SHOULD_CHECK_GOOSE" = true ]; then
-            update_pkg_hash "goose-cli" "hash"
-            update_pkg_hash "goose-cli" "cargoHash"
+            # File name: goose, Flake attr: goose-cli
+            update_pkg_hash "goose" "goose-cli" "hash"
+            update_pkg_hash "goose" "goose-cli" "cargoHash"
           fi
 
-          # Always run Kiro hash verification
-          update_pkg_hash "kiro-cli" "hash"
+          # File name: kiro, Flake attr: kiro-cli
+          update_pkg_hash "kiro" "kiro-cli" "hash"
 
       - name: Commit and Push Updated Hashes
         run: |
