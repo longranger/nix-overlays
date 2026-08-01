@@ -17,7 +17,7 @@ let
   rusty_v8_lib = fetchurl {
     url = "https://github.com/denoland/rusty_v8/releases/download/v145.0.0/librusty_v8_release_${stdenv.hostPlatform.config}.a.gz";
     # Use a dummy hash first if you want Nix to verify the SRI hash
-    hash = "sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=";
+    hash = "sha256-chV1PAx40UH3Ute5k3lLrgfhih39Rm3KqE+mTna6ysE=";
   };
 in
 rustPlatform.buildRustPackage rec {
