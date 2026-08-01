@@ -16,5 +16,11 @@
           goose = pkgs.callPackage ./pkgs/goose.nix { };
         };
       };
+      flake = {
+        overlays.default = final: prev: {
+          goose = final.callPackage ./pkgs/goose.nix { };
+          kiro = final.callPackage ./pkgs/kiro.nix { };
+        };
+      };
     };
 }
