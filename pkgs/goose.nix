@@ -2,13 +2,23 @@
   lib,
   rustPlatform,
   fetchFromGitHub,
+  fetchurl,
   pkg-config,
   openssl,
   dbus,
+  stdenv,
 }:
 
 let
   version = "1.45.0"; # renovate: datasource=github-releases depName=aaif-goose/goose
+
+  # Fetch the static rusty_v8 library explicitly for the build sandbox
+  # Matches the version requested in the build log (v145.0.0)
+  rusty_v8_lib = fetchurl {
+    url = "https://github.com/denoland/rusty_v8/releases/download/v145.0.0/librusty_v8_release_${stdenv.hostPlatform.config}.a.gz";
+    # Use a dummy hash first if you want Nix to verify the SRI hash
+    hash = "sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=";
+  };
 in
 rustPlatform.buildRustPackage rec {
   pname = "goose-cli";
@@ -27,6 +37,9 @@ rustPlatform.buildRustPackage rec {
       "cudaforge-0.1.6" = "sha256-w0e/mfx08BkphDEFEWxuyxyZu/gHiG0m6RHx+3BLzDY=";
     };
   };
+
+  # Pass the fetched static lib to rusty_v8's build script
+  RUSTY_V8_ARCHIVE = rusty_v8_lib;
 
   nativeBuildInputs = [ pkg-config ];
   buildInputs = [
