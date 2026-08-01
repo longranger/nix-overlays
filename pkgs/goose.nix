@@ -10,7 +10,7 @@
 let
   version = "1.45.0"; # renovate: datasource=github-releases depName=aaif-goose/goose
 in
-rustPlatform.buildRustPackage {
+rustPlatform.buildRustPackage rec {
   pname = "goose-cli";
   inherit version;
 
@@ -22,7 +22,7 @@ rustPlatform.buildRustPackage {
   };
 
   cargoLock = {
-    lockFile = ./Cargo.lock; # Or outputHashes if workspace dependencies have unpinned git sources
+    lockFile = "${src}/Cargo.lock";
   };
 
   nativeBuildInputs = [ pkg-config ];
