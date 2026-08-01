@@ -50,6 +50,11 @@ rustPlatform.buildRustPackage rec {
     dbus
   ];
 
+  dontUseCmakeConfigure = true;
+
+  # Skip tests to avoid compiling test-only targets & save build time
+  doCheck = false;
+
   env = {
     RUSTY_V8_ARCHIVE = rusty_v8_lib;
     LIBCLANG_PATH = "${llvmPackages.libclang.lib}/lib";
