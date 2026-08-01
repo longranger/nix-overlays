@@ -39,24 +39,35 @@ jobs:
 
             if [ ! -f "$file" ]; then
               echo "❌ File $file does not exist. Skipping."
-              return 1
+              return 0
             fi
 
             echo "==> Testing ${flake_attr} -> ${target_attr} in ${file}..."
 
-            # Force a hash mismatch to harvest the actual hash from Nix output
-            sed -i -E "s|(${target_attr}\s*=\s*\")sha256-[^\"]*(\";)|\1sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=\2|" "$file"
+            # 1. Substitute fake hash safely (ignore sed return code)
+            sed -i -E "s|(${target_attr}\s*=\s*\")[^\"]*(\";)|\1sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=\2|" "$file" || true
 
-            # Capture nix build output; allow error so set -e doesn't break the script
-            BUILD_ERR=$(nix build ".#${flake_attr}" 2>&1 || true)
-            NEW_HASH=$(echo "$BUILD_ERR" | grep -oP "got:\s+\Ksha256-[A-Za-z0-9+/=]+" | head -n 1)
+            # 2. Stage the file so Nix Flakes sees the updated working tree!
+            git add "$file" || true
+
+            # 3. Run nix build and capture stderr/stdout
+            set +e
+            BUILD_ERR=$(nix build ".#${flake_attr}" 2>&1)
+            BUILD_STATUS=$?
+            set -e
+
+            # 4. Extract new hash from error output
+            NEW_HASH=$(echo "$BUILD_ERR" | grep -oP "got:\s+\Ksha256-[A-Za-z0-9+/=]+" | head -n 1 || true)
 
             if [ -n "$NEW_HASH" ]; then
               echo "✅ Found updated ${target_attr} for ${flake_attr}: ${NEW_HASH}"
-              sed -i -E "s|(${target_attr}\s*=\s*\")sha256-[^\"]*(\";)|\1${NEW_HASH}\2|" "$file"
+              sed -i -E "s|(${target_attr}\s*=\s*\")[^\"]*(\";)|\1${NEW_HASH}\2|" "$file" || true
+              git add "$file" || true
             else
-              echo "⚠️ Could not extract hash mismatch for ${flake_attr} (${target_attr}). Restoring original file state."
-              git checkout -- "$file"
+              echo "⚠️ Could not extract hash mismatch for ${flake_attr} (${target_attr}). Raw Nix output:"
+              echo "$BUILD_ERR" | tail -n 20
+              echo "Restoring original file state."
+              git checkout -- "$file" || true
             fi
           }
 
