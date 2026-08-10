@@ -14,14 +14,14 @@
         packages = {
           kiro = pkgs.callPackage ./pkgs/kiro.nix { };
           goose = pkgs.callPackage ./pkgs/goose.nix { };
-          frigate-hass-card = pkgs.callPackage ./pkgs/frigate-hass-card.nix {};
+          advanced-camera-card = pkgs.callPackage ./pkgs/advanced-camera-card.nix {};
         };
       };
       flake = {
         overlays.default = final: prev: {
           goose = final.callPackage ./pkgs/goose.nix { };
           kiro = final.callPackage ./pkgs/kiro.nix { };
-          frigate-hass-card = final.callPackage ./pkgs/frigate-hass-card.nix {};
+          advanced-camera-card = final.callPackage ./pkgs/advanced-camera-card.nix {};
         };
       };
     };
