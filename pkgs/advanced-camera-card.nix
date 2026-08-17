@@ -10,7 +10,7 @@ stdenv.mkDerivation {
 
   src = fetchurl {
     url = "https://github.com/dermotduffy/advanced-camera-card/releases/download/v${version}/advanced-camera-card.js";
-    hash = lib.fakeHash;
+    hash = "sha256-w8ZFCfcWEqyyFZH+8f14LoxQb5mHCsDSc0Z5LCkEnTQ=";
   };
 
   dontUnpack = true;
