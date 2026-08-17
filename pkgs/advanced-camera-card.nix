@@ -10,7 +10,7 @@ stdenv.mkDerivation {
 
   src = fetchurl {
     url = "https://github.com/dermotduffy/advanced-camera-card/releases/download/v${version}/advanced-camera-card.js";
-    hash = ""; # GitHub Actions pipeline will catch and commit the hash automatically
+    hash = lib.fakeHash;
   };
 
   dontUnpack = true;
