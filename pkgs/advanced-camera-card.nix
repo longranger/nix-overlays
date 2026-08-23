@@ -17,7 +17,7 @@ stdenv.mkDerivation {
 
   installPhase = ''
     mkdir -p $out
-    cp $src $out/advanced-camera-card.js
+    cp -r *.js $out/
   '';
 
   meta = with lib; {
