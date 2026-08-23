@@ -1,4 +1,4 @@
-{ lib, stdenv, fetchurl }:
+{ lib, stdenv, fetchzip }:
 
 let
   # renovate: datasource=github-releases depName=dermotduffy/advanced-camera-card
@@ -8,16 +8,16 @@ stdenv.mkDerivation {
   pname = "advanced-camera-card";
   inherit version;
 
-  src = fetchurl {
-    url = "https://github.com/dermotduffy/advanced-camera-card/releases/download/v${version}/advanced-camera-card.js";
-    hash = "sha256-w8ZFCfcWEqyyFZH+8f14LoxQb5mHCsDSc0Z5LCkEnTQ=";
+  src = fetchzip {
+    url = "https://github.com/dermotduffy/advanced-camera-card/releases/download/v${version}/advanced-camera-card.zip";
+    hash = "sha256-lBdJBn/TLU3ezZnUJLt4eH87n1pOizS68RfLHYyRUq0=";
   };
 
-  dontUnpack = true;
+  dontBuild = true;
 
   installPhase = ''
     mkdir -p $out
-    cp -r *.js $out/
+    cp -r ./* $out/
   '';
 
   meta = with lib; {
