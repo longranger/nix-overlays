@@ -22,7 +22,7 @@ stdenv.mkDerivation {
 
   src = fetchurl {
     url = "https://desktop-release.q.us-east-1.amazonaws.com/latest/kirocli-${arch}-linux-musl.zip";
-    hash = "sha256-fOWKK/C9bw830l8S4c58bIMzBCJHH1RsNOYJ7swGFEQ=";
+    hash = "sha256-fHqfXjKEyCzG8PsaMBWXNoU4rbg9kWkn5mTJV6n5U+8=";
   };
 
   nativeBuildInputs = [ unzip makeWrapper ];
